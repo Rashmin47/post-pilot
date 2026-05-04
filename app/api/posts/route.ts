@@ -4,6 +4,7 @@ import { posts } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { publisherQueue } from "@/lib/queues/publisher";
+import { checkPlanLimit } from "@/lib/plan-limits";
 
 export async function GET() {
   try {
@@ -40,6 +41,12 @@ export async function POST(req: Request) {
 
     if (!platforms || platforms.length === 0) {
       return new NextResponse("At least one platform is required", { status: 400 });
+    }
+
+    // Check plan limits
+    const { allowed, current, limit } = await checkPlanLimit(userId, "maxPostsPerMonth");
+    if (!allowed) {
+      return new NextResponse(`Plan limit reached: ${current}/${limit} posts this month. Upgrade to Pro for unlimited posts.`, { status: 403 });
     }
 
     const status = scheduledAt ? "scheduled" : "draft";

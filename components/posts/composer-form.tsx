@@ -14,6 +14,10 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { MediaUpload } from "@/components/media/media-upload";
+import { MediaPickerModal } from "@/components/media/media-picker-modal";
+import { X } from "lucide-react";
+import { IKImage } from "imagekitio-next";
 
 const PLATFORM_LIMITS: Record<string, number> = {
   twitter: 280,
@@ -163,17 +167,44 @@ export function ComposerForm() {
         </Card>
 
         <Card className="bg-[#111120] border-[#1e1e2e]">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-semibold text-[#64748b] uppercase tracking-wider">
               3. Media
             </CardTitle>
+            <MediaPickerModal 
+              selectedUrls={mediaUrls} 
+              onSelect={setMediaUrls} 
+              maxSelect={selectedPlatforms.includes('instagram') ? 10 : 4}
+            />
           </CardHeader>
-          <CardContent>
-             <div className="border-2 border-dashed border-[#1e1e2e] rounded-xl p-10 text-center hover:border-[#6366f1] transition-all cursor-pointer group">
-               <Upload className="w-10 h-10 mx-auto text-[#1e1e2e] group-hover:text-[#6366f1] mb-4" />
-               <p className="text-sm text-[#64748b]">Click or drag to upload images or videos</p>
-               <p className="text-xs text-[#3f3f5a] mt-1">ImageKit integration coming soon</p>
-             </div>
+          <CardContent className="space-y-4">
+            {mediaUrls.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                {mediaUrls.map((url, index) => (
+                  <div key={index} className="relative aspect-square rounded-xl overflow-hidden border border-[#1e1e2e] group">
+                    <IKImage
+                      urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}
+                      src={url}
+                      transformation={[{ width: "200", height: "200", cropMode: "extract" }]}
+                      className="object-cover w-full h-full"
+                      alt={`Selected media ${index + 1}`}
+                    />
+                    <button
+                      onClick={() => setMediaUrls(mediaUrls.filter((_, i) => i !== index))}
+                      className="absolute top-1 right-1 bg-black/50 hover:bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {mediaUrls.length < 4 && (
+              <MediaUpload 
+                onSuccess={(url) => setMediaUrls([...mediaUrls, url])} 
+              />
+            )}
           </CardContent>
         </Card>
 

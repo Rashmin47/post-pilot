@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { getPlatformClient } from "@/lib/platforms";
 import { NextRequest, NextResponse } from "next/server";
+import { checkPlanLimit } from "@/lib/plan-limits";
 
 export async function GET(
   req: NextRequest,
@@ -11,6 +12,12 @@ export async function GET(
 
   if (!userId) {
     return new NextResponse("Unauthorized", { status: 401 });
+  }
+
+  // Check plan limits
+  const { allowed } = await checkPlanLimit(userId, "maxSocialAccounts");
+  if (!allowed) {
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing?error=limit_reached`);
   }
 
   try {

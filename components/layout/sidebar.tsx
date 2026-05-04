@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,15 @@ const sections = ["Main", "Automation", "Account"];
 export function Sidebar() {
   const pathname = usePathname();
   const { user } = useUser();
+
+  const [dbUser, setDbUser] = useState<any>(null);
+
+  useEffect(() => {
+    fetch("/api/user")
+      .then((res) => res.json())
+      .then((data) => setDbUser(data))
+      .catch(() => {});
+  }, []);
 
   return (
     <aside className="w-64 bg-[#0d0d1a] border-r border-[#1e1e2e] flex flex-col h-screen sticky top-0 hidden md:flex">
@@ -90,7 +100,9 @@ export function Sidebar() {
             <span className="text-sm font-semibold truncate">
               {user?.fullName || user?.primaryEmailAddress?.emailAddress}
             </span>
-            <span className="text-xs text-[#6366f1] font-medium">Pro Plan</span>
+            <span className="text-xs text-[#6366f1] font-medium capitalize">
+              {dbUser?.plan || "Free"} Plan
+            </span>
           </div>
         </div>
       </div>

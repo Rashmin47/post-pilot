@@ -36,6 +36,10 @@ export const users = pgTable("users", {
   email: text("email").notNull(),
   name: text("name"),
   plan: planEnum("plan").default("free").notNull(),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  stripePriceId: text("stripe_price_id"),
+  stripeCurrentPeriodEnd: timestamp("stripe_current_period_end"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -119,12 +123,30 @@ export const mediaAssets = pgTable("media_assets", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const analyticsSnapshots = pgTable("analytics_snapshots", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  accountId: uuid("account_id").references(() => socialAccounts.id, {
+    onDelete: "cascade",
+  }),
+  platform: platformEnum("platform").notNull(),
+  date: timestamp("date").notNull(),
+  followers: integer("followers").default(0).notNull(),
+  engagement: integer("engagement").default(0).notNull(),
+  reach: integer("reach").default(0).notNull(),
+  postsCount: integer("posts_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   socialAccounts: many(socialAccounts),
   posts: many(posts),
   autoReplyRules: many(autoReplyRules),
   mediaAssets: many(mediaAssets),
+  analyticsSnapshots: many(analyticsSnapshots),
 }));
 
 export const socialAccountsRelations = relations(socialAccounts, ({ one }) => ({
@@ -176,3 +198,17 @@ export const mediaAssetsRelations = relations(mediaAssets, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+export const analyticsSnapshotsRelations = relations(
+  analyticsSnapshots,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [analyticsSnapshots.userId],
+      references: [users.id],
+    }),
+    account: one(socialAccounts, {
+      fields: [analyticsSnapshots.accountId],
+      references: [socialAccounts.id],
+    }),
+  })
+);
