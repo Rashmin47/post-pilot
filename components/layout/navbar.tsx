@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { SignInButton, SignUpButton, SignedIn, SignedOut } from "@clerk/nextjs";
+import { SignInButton, SignUpButton, Show } from "@clerk/nextjs";
 
 export function Navbar() {
   return (
@@ -19,7 +19,7 @@ export function Navbar() {
       </div>
 
       <div className="flex items-center gap-4">
-        <SignedOut>
+        <Show when="signed-out">
           <SignInButton mode="modal">
             <Button variant="ghost" className="text-[#94a3b8] hover:text-white">
               Log in
@@ -30,14 +30,14 @@ export function Navbar() {
               Get Started Free
             </Button>
           </SignUpButton>
-        </SignedOut>
-        <SignedIn>
+        </Show>
+        <Show when="signed-in">
           <Link href="/dashboard">
             <Button className="gradient-bg hover:opacity-90 transition-opacity font-semibold">
               Dashboard
             </Button>
           </Link>
-        </SignedIn>
+        </Show>
       </div>
     </nav>
   );

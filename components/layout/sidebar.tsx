@@ -80,7 +80,6 @@ export function Sidebar() {
       <div className="p-4 border-t border-[#1e1e2e] mt-auto">
         <div className="flex items-center gap-3 px-3 py-2">
           <UserButton
-            afterSignOutUrl="/"
             appearance={{
               elements: {
                 userButtonAvatarBox: "w-8 h-8",
