@@ -7,7 +7,7 @@ import Stripe from "stripe";
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
-// Helper to map price IDs to plans
+// Map price → plan
 const getPlanFromPriceId = (priceId: string) => {
   const proMonthly = process.env.STRIPE_PRICE_ID_PRO_MONTHLY;
   const proAnnual = process.env.STRIPE_PRICE_ID_PRO_ANNUAL;
@@ -21,7 +21,11 @@ const getPlanFromPriceId = (priceId: string) => {
 
 export async function POST(req: Request) {
   const body = await req.text();
-  const sig = (await headers()).get("stripe-signature")!;
+  const sig = (await headers()).get("stripe-signature");
+
+  if (!sig) {
+    return new Response("Missing stripe signature", { status: 400 });
+  }
 
   let event: Stripe.Event;
 
@@ -31,66 +35,98 @@ export async function POST(req: Request) {
     return new Response(`Webhook Error: ${err.message}`, { status: 400 });
   }
 
-  const session = event.data.object as any;
-
   switch (event.type) {
+    // ✅ CHECKOUT COMPLETED
     case "checkout.session.completed": {
-      const subscription = await stripe.subscriptions.retrieve(session.subscription);
-      const customerId = session.customer as string;
-      const userId = session.metadata.userId;
+      const session = event.data.object as Stripe.Checkout.Session;
+
+      if (!session.subscription || !session.customer) break;
+
+      const subscription = (await stripe.subscriptions.retrieve(
+        session.subscription as string,
+      )) as Stripe.Subscription;
+
+      const userId = session.metadata?.userId;
+      if (!userId) break;
 
       await db
         .update(users)
         .set({
-          stripeCustomerId: customerId,
+          stripeCustomerId: session.customer as string,
           stripeSubscriptionId: subscription.id,
-          stripePriceId: subscription.items.data[0].price.id,
-          stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-          plan: getPlanFromPriceId(subscription.items.data[0].price.id) as any,
+          stripePriceId: subscription.items.data[0]?.price.id ?? null,
+          stripeCurrentPeriodEnd: subscription.current_period_end
+            ? new Date(subscription.current_period_end * 1000)
+            : null,
+          plan: getPlanFromPriceId(
+            subscription.items.data[0]?.price.id || "",
+          ) as any,
         })
         .where(eq(users.id, userId));
+
       break;
     }
 
+    // ✅ PAYMENT SUCCESS
     case "invoice.payment_succeeded": {
-      const subscription = await stripe.subscriptions.retrieve(session.subscription);
-      
+      const invoice = event.data.object as Stripe.Invoice;
+
+      if (!invoice.subscription) break;
+
+      const subscription = (await stripe.subscriptions.retrieve(
+        invoice.subscription as string,
+      )) as Stripe.Subscription;
+
       await db
         .update(users)
         .set({
-          stripePriceId: subscription.items.data[0].price.id,
-          stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-          plan: getPlanFromPriceId(subscription.items.data[0].price.id) as any,
+          stripePriceId: subscription.items.data[0]?.price.id ?? null,
+          stripeCurrentPeriodEnd: subscription.current_period_end
+            ? new Date(subscription.current_period_end * 1000)
+            : null,
+          plan: getPlanFromPriceId(
+            subscription.items.data[0]?.price.id || "",
+          ) as any,
         })
         .where(eq(users.stripeSubscriptionId, subscription.id));
+
       break;
     }
 
+    // ✅ SUBSCRIPTION UPDATED
     case "customer.subscription.updated": {
       const subscription = event.data.object as Stripe.Subscription;
-      
+
       await db
         .update(users)
         .set({
-          stripePriceId: subscription.items.data[0].price.id,
-          stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-          plan: getPlanFromPriceId(subscription.items.data[0].price.id) as any,
+          stripePriceId: subscription.items.data[0]?.price.id ?? null,
+          stripeCurrentPeriodEnd: subscription.current_period_end
+            ? new Date(subscription.current_period_end * 1000)
+            : null,
+          plan: getPlanFromPriceId(
+            subscription.items.data[0]?.price.id || "",
+          ) as any,
         })
         .where(eq(users.stripeSubscriptionId, subscription.id));
+
       break;
     }
 
+    // ✅ SUBSCRIPTION DELETED
     case "customer.subscription.deleted": {
       const subscription = event.data.object as Stripe.Subscription;
-      
+
       await db
         .update(users)
         .set({
           stripeSubscriptionId: null,
           stripePriceId: null,
+          stripeCurrentPeriodEnd: null,
           plan: "free",
         })
         .where(eq(users.stripeSubscriptionId, subscription.id));
+
       break;
     }
   }
