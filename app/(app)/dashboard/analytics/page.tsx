@@ -2,24 +2,27 @@
 
 import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { 
-  BarChart3, 
-  TrendingUp, 
-  Users, 
-  MessageSquare, 
+import {
+  BarChart3,
+  TrendingUp,
+  Users,
+  MessageSquare,
   Send,
   Calendar,
-  Filter
+  Filter,
 } from "lucide-react";
 import { StatsCard } from "@/components/analytics/stats-card";
-import { EngagementChart, PlatformDistribution } from "@/components/analytics/analytics-charts";
+import {
+  EngagementChart,
+  PlatformDistribution,
+} from "@/components/analytics/analytics-charts";
 import { Button } from "@/components/ui/button";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AnalyticsData } from "@/lib/analytics";
@@ -28,7 +31,7 @@ export default function AnalyticsPage() {
   const { user } = useUser();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [days, setDays] = useState("30");
+  const [days, setDays] = useState<string | null>("30");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -71,7 +74,9 @@ export default function AnalyticsPage() {
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-1">Analytics Overview</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-1">
+            Analytics Overview
+          </h1>
           <p className="text-[#64748b]">
             Track your performance and audience growth across all platforms.
           </p>
@@ -91,7 +96,11 @@ export default function AnalyticsPage() {
               </SelectContent>
             </Select>
           </div>
-          <Button variant="outline" size="sm" className="border-[#1e1e2e] bg-[#0d0d1a] text-xs font-bold">
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-[#1e1e2e] bg-[#0d0d1a] text-xs font-bold"
+          >
             Export Report
           </Button>
         </div>
@@ -127,13 +136,11 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <EngagementChart 
-          data={data?.trends || []} 
-          title="Engagement & Reach Trends" 
+        <EngagementChart
+          data={data?.trends || []}
+          title="Engagement & Reach Trends"
         />
-        <PlatformDistribution 
-          data={data?.distribution || []} 
-        />
+        <PlatformDistribution data={data?.distribution || []} />
       </div>
 
       <div className="bg-[#0d0d1a]/50 border border-[#1e1e2e] rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-4">
@@ -143,7 +150,10 @@ export default function AnalyticsPage() {
         <div className="max-w-md">
           <h3 className="text-xl font-bold mb-2">Want deeper insights?</h3>
           <p className="text-sm text-[#64748b]">
-            Upgrade to the <span className="text-brand-indigo font-bold">Pro Plan</span> to unlock advanced audience demographics, competitor analysis, and detailed post-level metrics.
+            Upgrade to the{" "}
+            <span className="text-brand-indigo font-bold">Pro Plan</span> to
+            unlock advanced audience demographics, competitor analysis, and
+            detailed post-level metrics.
           </p>
         </div>
         <Button className="gradient-bg border-none px-8 font-bold">
