@@ -7,6 +7,11 @@ import Stripe from "stripe";
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
+// Extend Stripe type to include missing field
+type StripeSubscriptionWithPeriod = Stripe.Subscription & {
+  current_period_end: number;
+};
+
 // Map price → plan
 const getPlanFromPriceId = (priceId: string) => {
   const proMonthly = process.env.STRIPE_PRICE_ID_PRO_MONTHLY;
@@ -44,23 +49,23 @@ export async function POST(req: Request) {
 
       const subscription = (await stripe.subscriptions.retrieve(
         session.subscription as string,
-      )) as Stripe.Subscription;
+      )) as StripeSubscriptionWithPeriod;
 
       const userId = session.metadata?.userId;
       if (!userId) break;
+
+      const priceId = subscription.items.data[0]?.price.id || "";
 
       await db
         .update(users)
         .set({
           stripeCustomerId: session.customer as string,
           stripeSubscriptionId: subscription.id,
-          stripePriceId: subscription.items.data[0]?.price.id ?? null,
+          stripePriceId: priceId || null,
           stripeCurrentPeriodEnd: subscription.current_period_end
             ? new Date(subscription.current_period_end * 1000)
             : null,
-          plan: getPlanFromPriceId(
-            subscription.items.data[0]?.price.id || "",
-          ) as any,
+          plan: getPlanFromPriceId(priceId) as any,
         })
         .where(eq(users.id, userId));
 
@@ -75,18 +80,18 @@ export async function POST(req: Request) {
 
       const subscription = (await stripe.subscriptions.retrieve(
         invoice.subscription as string,
-      )) as Stripe.Subscription;
+      )) as StripeSubscriptionWithPeriod;
+
+      const priceId = subscription.items.data[0]?.price.id || "";
 
       await db
         .update(users)
         .set({
-          stripePriceId: subscription.items.data[0]?.price.id ?? null,
+          stripePriceId: priceId || null,
           stripeCurrentPeriodEnd: subscription.current_period_end
             ? new Date(subscription.current_period_end * 1000)
             : null,
-          plan: getPlanFromPriceId(
-            subscription.items.data[0]?.price.id || "",
-          ) as any,
+          plan: getPlanFromPriceId(priceId) as any,
         })
         .where(eq(users.stripeSubscriptionId, subscription.id));
 
@@ -95,18 +100,18 @@ export async function POST(req: Request) {
 
     // ✅ SUBSCRIPTION UPDATED
     case "customer.subscription.updated": {
-      const subscription = event.data.object as Stripe.Subscription;
+      const subscription = event.data.object as StripeSubscriptionWithPeriod;
+
+      const priceId = subscription.items.data[0]?.price.id || "";
 
       await db
         .update(users)
         .set({
-          stripePriceId: subscription.items.data[0]?.price.id ?? null,
+          stripePriceId: priceId || null,
           stripeCurrentPeriodEnd: subscription.current_period_end
             ? new Date(subscription.current_period_end * 1000)
             : null,
-          plan: getPlanFromPriceId(
-            subscription.items.data[0]?.price.id || "",
-          ) as any,
+          plan: getPlanFromPriceId(priceId) as any,
         })
         .where(eq(users.stripeSubscriptionId, subscription.id));
 
